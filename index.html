@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>酒类运输航线图</title>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 引入世界地图数据 -->
+    <script src="./world.js"></script>
+    <style>
+        #main {
+            width: 100%;
+            height: 800px;
+        }
+        .controls {
+            margin: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="main"></div>
+    <script>
+        // 初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+        
+        // 地点坐标数据
+        const geoCoordMap = {
+            'Northern France': [2.2137, 46.2276],
+            'Southern France': [3.8767, 43.6108],
+            'Northern Germany': [10.4515, 52.2884],
+            'Scotland': [-4.2026, 56.4907],
+            'England': [-1.1743, 52.3555],
+            'Montreal': [-73.5673, 45.5017],
+            'New York': [-74.0060, 40.7128],
+            'Florida': [-81.5158, 27.6648],
+            'Spain': [-3.7492, 40.4637],
+            'Southern Germany': [11.5820, 48.1351]
+        };
+        
+        // 船只航线数据
+        const shipRoutes = {
+            'A-shipping-1': {
+                name: 'A-shipping Tanker1 (Red Wine)',
+                color: '#e74c3c',
+                routes: [
+                    {from: 'Northern France', to: 'England', amount: 200000, amountAfter: 140000},
+                    {from: 'England', to: 'Montreal', amount: 140000, amountAfter: 140000},
+                    {from: 'Montreal', to: 'New York', amount: 140000, amountAfter: 140000},
+                    {from: 'New York', to: 'Florida', amount: 140000, amountAfter: 0}
+                ]
+            },
+            'A-shipping-2': {
+                name: 'A-shipping Tanker2 (White Wine)',
+                color: '#3498db',
+                routes: [
+                    {from: 'Southern France', to: 'England', amount: 80000, amountAfter: 70000},
+                    {from: 'England', to: 'Montreal', amount: 70000, amountAfter: 40000},
+                    {from: 'Montreal', to: 'New York', amount: 40000, amountAfter: 20000},
+                    {from: 'New York', to: 'Florida', amount: 20000, amountAfter: 0}
+                ]
+            },
+            'B-shipping-1': {
+                name: 'B-shipping Tanker1 (White Wine)',
+                color: '#2ecc71',
+                routes: [
+                    {from: 'Northern Germany', to: 'Northern France', amount: 100000, amountAfter: 80000},
+                    {from: 'Northern France', to: 'England', amount: 80000, amountAfter: 50000},
+                    {from: 'England', to: 'Southern France', amount: 50000, amountAfter: 0}
+                ]
+            },
+            'B-shipping-2': {
+                name: 'B-shipping Tanker2 (White Wine)',
+                color: '#9b59b6',
+                routes: [
+                    {from: 'Northern Germany', to: 'Montreal', amount: 200000, amountAfter: 160000},
+                    {from: 'Montreal', to: 'New York', amount: 160000, amountAfter: 80000},
+                    {from: 'New York', to: 'Florida', amount: 80000, amountAfter: 40000},
+                    {from: 'Florida', to: 'Spain', amount: 40000, amountAfter: 0}
+                ]
+            },
+            'C-shipping-1': {
+                name: 'C-shipping Tanker1 (Whisky)',
+                color: '#f39c12',
+                routes: [
+                    {from: 'Scotland', to: 'Northern Germany', amount: 50000, amountAfter: 40000},
+                    {from: 'Northern Germany', to: 'Northern France', amount: 40000, amountAfter: 30000},
+                    {from: 'Northern France', to: 'England', amount: 30000, amountAfter: 0}
+                ]
+            },
+            'D-shipping-1': {
+                name: 'D-shipping Tanker1 (Whisky)',
+                color: '#e67e22',
+                routes: [
+                    {from: 'Scotland', to: 'Southern France', amount: 90000, amountAfter: 70000},
+                    {from: 'Southern France', to: 'Spain', amount: 70000, amountAfter: 30000},
+                    {from: 'Spain', to: 'England', amount: 30000, amountAfter: 0}
+                ]
+            }
+        };
+        
+        // 生成航线数据
+        function generateLinesData(shipKey, index, total) {
+            const ship = shipRoutes[shipKey];
+            const linesData = [];
+            
+            ship.routes.forEach(route => {
+                if (geoCoordMap[route.from] && geoCoordMap[route.to]) {
+                    // 计算每条航线的独特曲率和高度
+                    const curveness = 0.2 + (index / total) * 0.3; // 0.2 到 0.5 之间的曲率
+                    const zlevel = 2 + index; // 不同的z层级
+                    
+                    // 计算两点之间的距离来调整高度
+                    const fromCoord = geoCoordMap[route.from];
+                    const toCoord = geoCoordMap[route.to];
+                    const distance = Math.sqrt(
+                        Math.pow(fromCoord[0] - toCoord[0], 2) + 
+                        Math.pow(fromCoord[1] - toCoord[1], 2)
+                    );
+                    
+                    linesData.push({
+                        fromName: route.from,
+                        toName: route.to,
+                        coords: [geoCoordMap[route.from], geoCoordMap[route.to]],
+                        value: route.amount,
+                        amountAfter: route.amountAfter,
+                        lineStyle: {
+                            color: ship.color,
+                            width: Math.max(1, Math.log10(route.amount) / 10),
+                            curveness: curveness,
+                            opacity: 0.8
+                        }
+                    });
+                }
+            });
+            
+            return {
+                name: ship.name,
+                type: 'lines',
+                coordinateSystem: 'geo',
+                zlevel: 2 + index, // 不同的z层级
+                effect: {
+                    show: true,
+                    period: 6,
+                    trailLength: 0.7,
+                    color: '#fff',
+                    symbolSize: 3
+                },
+                lineStyle: {
+                    color: ship.color,
+                    width: 1,
+                    curveness: 0.2 + (index / total) * 0.3, // 每条航线使用不同的曲率
+                    opacity: 0.8
+                },
+                data: linesData
+            };
+        }
+        
+        // 生成所有船只的航线数据
+        function generateAllLinesData() {
+            const series = [];
+            const totalShips = Object.keys(shipRoutes).length;
+            
+            // 添加航线
+            Object.keys(shipRoutes).forEach((shipKey, index) => {
+                series.push(generateLinesData(shipKey, index, totalShips));
+            });
+            
+            // 添加地点标记
+            const pointData = [];
+            Object.keys(geoCoordMap).forEach(name => {
+                pointData.push({
+                    name: name,
+                    value: geoCoordMap[name]
+                });
+            });
+            
+            series.push({
+                name: '地点',
+                type: 'effectScatter',
+                coordinateSystem: 'geo',
+                zlevel: totalShips + 2, // 确保地点标记在最上层
+                rippleEffect: {
+                    brushType: 'stroke'
+                },
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{b}',
+                    fontSize: 12,
+                    color: '#fff',
+                    textBorderColor: '#000',
+                    textBorderWidth: 2
+                },
+                symbolSize: 8,
+                itemStyle: {
+                    color: '#ffa022'
+                },
+                data: pointData
+            });
+            
+            return series;
+        }
+        
+        // 更新图表
+        function updateChart() {
+            const series = generateAllLinesData();
+            
+            const option = {
+                title: {
+                    text: '酒类运输航线图',
+                    subtext: '基于各船只运输数据',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function(params) {
+                        if (params.seriesType === 'lines') {
+                            return `${params.data.fromName} → ${params.data.toName}<br/>
+                                    运输量: ${params.data.value} 升<br/>
+                                    到达后剩余: ${params.data.amountAfter} 升`;
+                        } else {
+                            return params.name;
+                        }
+                    }
+                },
+                legend: {
+                    orient: 'vertical',
+                    top: 'bottom',
+                    left: 'right',
+                    data: Object.values(shipRoutes).map(ship => ship.name),
+                    textStyle: {
+                        color: '#000'
+                    }
+                },
+                geo: {
+                    map: 'world',
+                    label: {
+                        emphasis: {
+                            show: false
+                        }
+                    },
+                    roam: true,
+                    itemStyle: {
+                        normal: {
+                            areaColor: '#323c48',
+                            borderColor: '#404a59'
+                        },
+                        emphasis: {
+                            areaColor: '#2a333d'
+                        }
+                    },
+                    zoom: 1.5,
+                    center: [0, 40]
+                },
+                series: series
+            };
+            
+            myChart.setOption(option);
+        }
+        
+        // 初始化图表
+        updateChart();
+        
+        // 响应窗口大小变化
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+    </script>
+</body>
+</html>
