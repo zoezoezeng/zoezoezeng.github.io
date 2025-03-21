@@ -219,8 +219,8 @@
                     formatter: function(params) {
                         if (params.seriesType === 'lines') {
                             return `${params.data.fromName} → ${params.data.toName}<br/>
-                                    运输量: ${params.data.value} 升<br/>
-                                    到达后剩余: ${params.data.amountAfter} 升`;
+                                    Initial volume of alcohol transported: ${params.data.value} litre<br/>
+                                    Alcohol remaining on arrival: ${params.data.amountAfter} litre`;
                         } else {
                             return params.name;
                         }
